@@ -4,6 +4,7 @@ import requests
 import psycopg2
 import time
 
+
 class Downloader():
     def __init__(self, URI):
         self.URI = URI
@@ -17,12 +18,14 @@ class Downloader():
         driver = webdriver.Firefox()
 
         driver.get(self.URI)
-        time.sleep(2)
+
+
+        time.sleep(1)
 
         while True:
             previousHeight = driver.execute_script('return document.body.scrollHeight;')
             driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            time.sleep(0.5)
+            time.sleep(1)
             newHeight= driver.execute_script('return document.body.scrollHeight;')
 
             if previousHeight == newHeight:
@@ -46,12 +49,12 @@ class Downloader():
                         (i+1, name, surname, link))
 
             driver.get(link)
-            time.sleep(2)
+            time.sleep(1)
 
             while True:
                 previousHeight = driver.execute_script('return document.body.scrollHeight;')
                 driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                time.sleep(0.5)
+                time.sleep(1)
                 newHeight = driver.execute_script('return document.body.scrollHeight;')
 
                 if previousHeight == newHeight:
@@ -65,6 +68,8 @@ class Downloader():
 
             for research_link in researches_links:
                 content = requests.get(research_link).content
+                time.sleep(1)
+                print(content)
                 soup = BeautifulSoup(content, 'lxml')
                 research_id = soup.find('table', class_ ='w-full').tbody.td.text
 

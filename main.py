@@ -5,7 +5,8 @@ def main():
 
     downloader = Downloader(URI)
     downloader.getUsers()
-    # downloader.createTables()
+    # downloader.createTa
+    # bles()
 
 if  __name__ == "__main__":
     main()
