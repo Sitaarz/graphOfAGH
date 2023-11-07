@@ -10,9 +10,10 @@ class Downloader():
         self.web_driver = web_driver
         self.conn = psycopg2.connect(dbname="postgres", user="postgres", password="1234", host="localhost", port=5432)
         self.cur = self.conn.cursor()
+        self.loss = 0
         
-        self.users = []
-        self.articles = []
+        self.users: list[tuple[str, str, str, int]] = [] # list[ tuples[ id, link, name, article_number ]]
+        self.users_and_articles: list[tuple[str, list[str]]] = [] # list[ tuples [id, list[ article ids ]]]
         
     def scroll_down(self, sleep_time, passive_scrolls_limit):
         passive_scrolls_counter = 0
@@ -33,6 +34,12 @@ class Downloader():
         time.sleep(1)
 
 
+    def _parse_article_number(string) -> int:
+        try:
+            return int(string.split(' ')[0])
+        except ValueError:
+            return 0
+    
     def get_users(self, URI):
         self.open_page(URI)
         # self.scroll_down(0.5, 15)
@@ -44,16 +51,27 @@ class Downloader():
         ids = []
         user_names = []
         user_links = []
+        article_number = []
         
         for id, anchor in enumerate(anchors):
+            divs = anchor.find_all('div')
+            
+            user_name = divs[0].text
+            user_link = 'https://badap.agh.edu.pl' + anchor['href']
+            num1 = divs[2].text
+            num2 = divs[3].text
+            
+            art_num = Downloader._parse_article_number(num1) + Downloader._parse_article_number(num2)
+            
             ids.append(id + 1)
-            user_names.append(anchor.div.text)
-            user_links.append('https://badap.agh.edu.pl' + anchor['href'])
+            user_names.append(user_name)
+            user_links.append(user_link)
+            article_number.append(art_num)
         
-        self.users = list(zip(ids, user_links, user_names))
+        self.users = list(zip(ids, user_links, user_names, article_number))
 
     def write_users_to_db(self):
-        for id, profile_link, user_name in self.users:
+        for id, profile_link, user_name, _ in self.users:
             parts = user_name.split(' ')
             surname = parts[0]
             name = ' '.join(parts[1:])
@@ -63,15 +81,16 @@ class Downloader():
 
     def get_articles(self):
         for user in self.users:
-            self.articles += self.get_articles_of_user(user)
+            self.users_and_articles.append(self.get_articles_of_user(user))
 
     def write_articles_to_db(self):
-        for user_id, article_id in self.articles:
-            self.cur.execute('INSERT INTO research (research_id) VALUES (%s) ON CONFLICT DO NOTHING', (article_id,))
-            self.cur.execute('INSERT INTO link (person_id, research_id) VALUES (%s,%s)', (user_id, article_id))
+        for user_id, articles in self.users_and_articles:
+            for article_id in articles:
+                self.cur.execute('INSERT INTO research (research_id) VALUES (%s) ON CONFLICT DO NOTHING', (article_id,))
+                self.cur.execute('INSERT INTO link (person_id, research_id) VALUES (%s,%s)', (user_id, article_id))
     
     def get_articles_of_user(self, user) -> list[tuple[int, str]]:
-        user_id, profile_link, user_name = user
+        user_id, profile_link, user_name, article_number = user
         
         self.open_page(profile_link)
         self.scroll_down(0.33, 3)
@@ -80,7 +99,6 @@ class Downloader():
         soup = BeautifulSoup(content, 'lxml')
         anchors = soup.find_all('a', class_='font-bold p-2 hover:underline details')
         
-        users_ids = []
         article_ids = []
         
         for anchor in anchors:
@@ -88,15 +106,17 @@ class Downloader():
             content = requests.get(article_link).content
             soup = BeautifulSoup(content, 'lxml')
             article_id = soup.find('table', class_ ='w-full').tbody.td.text
-            
-            users_ids.append(user_id)
+    
             article_ids.append(article_id)
 
             print(user_id, user_name, article_link, article_id)
             print('--------------------------------------')
+            
+        if len(article_ids) != article_number:
+            print(f'Article number mismatch for user {user_name}')
+            self.loss += article_number - len(article_ids)
 
-        user_articles = list(zip(users_ids, article_ids))
-        return user_articles
+        return (user_id, article_ids)
     
     
     def commit_and_close(self):

@@ -5,13 +5,12 @@ def main():
 
     downloader = Downloader()
     downloader.get_users(URI)
-    for id, link, name in downloader.users:
-        print(id, link, name)
-        
-    print("\n\n\n")
+    
+    for id, link, name, art_num in downloader.users:
+        print(id, link, name, art_num)
     
     downloader.get_articles()
-    # downloader.createTables()
+    downloader.createTables()
 
 if  __name__ == "__main__":
     main()
