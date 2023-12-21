@@ -1,12 +1,11 @@
-from enum import Enum
 import math
 from bs4 import BeautifulSoup
-from selenium import webdriver
 import requests
-import psycopg2
-import time
 import logging
 import json
+
+from web_driver import WebDriver
+from data_base import DataBase
 
 
 #* ----- LOGGING CONFIGURATION -----
@@ -16,166 +15,6 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s\t%(message)s'
 )
 #* ---------------------------------
-
-
-class WebDriver:
-    class Web_driver_type(Enum):
-        safari = 1
-        chrome = 2
-        edge = 3
-        firefox = 4
-        
-    def __init__(self, web_driver_type: Web_driver_type):
-        self.web_driver_type = web_driver_type
-        self.driver = self.new_web_dirver()
-
-    def new_web_dirver(self) -> webdriver:
-        match self.web_driver_type:
-            case self.Web_driver_type.safari:
-                return webdriver.Safari()
-            case self.Web_driver_type.chrome:
-                return webdriver.Chrome()
-            case self.Web_driver_type.edge:
-                return webdriver.Edge()
-            case self.Web_driver_type.firefox:
-                return webdriver.Firefox()
-
-
-    def refresh(self) -> None:
-        self.driver.quit()
-        self.driver = self.new_web_dirver()
-
-    def scroll_down(self, intervals=0.25, max_passive_time=10):
-        passive_scrolls_limit = max_passive_time / intervals
-        passive_scrolls_counter = 0
-        logging.debug(f'Scrolling down with intervals {intervals} and passive limit {passive_scrolls_limit}')
-        
-        def get_height():
-            return self.driver.execute_script("return document.body.scrollHeight;")
-        
-        while passive_scrolls_counter < passive_scrolls_limit:
-            prev_height = get_height()
-            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(intervals)
-            
-            if get_height() == prev_height:
-                passive_scrolls_counter += 1
-            else:
-                passive_scrolls_counter = 0
-    
-    def open_page(self, URL, limit=10):
-        count = 0
-        while count < limit:
-            try:
-                self.driver.get(URL)
-                logging.debug(f'Page {URL} opened')
-                return
-            except:
-                self.refresh()
-                count += 1
-        logging.critical(f'Page {URL} failed to open!')
-        raise Exception(f'Page {URL} failed to open!')
-
-
-
-class DataBase:
-    def __init__(self, host='localhost', user='postgres',
-                 password='1234', port=5432):
-        self.connection_args = {
-            'host':     host,
-            'user':     user,
-            'password': password,
-            'port':     port
-        }
-        self.conn = None
-        self.cur = None
-    
-
-    def create_tables(self):
-        self.connect()
-        self.create_table_researchers()
-        self.create_table_articles()
-        self.create_table_links()
-        self.commit_and_close()
-    
-    def create_table_researchers(self):
-        self.cur.execute("""DROP TABLE IF EXISTS researchers CASCADE""")
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS researchers(
-                            id INT PRIMARY KEY,
-                            name TEXT,
-                            surname TEXT,
-                            profile_link TEXT UNIQUE
-                            )""")
-    
-    def create_table_articles(self):
-        self.cur.execute("""DROP TABLE IF EXISTS articles CASCADE""")
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS articles(
-                            id BIGINT PRIMARY KEY
-                            )""")
-    
-    def create_table_links(self):
-        self.cur.execute("""DROP TABLE IF EXISTS links CASCADE""")
-        self.cur.execute("""CREATE TABLE IF NOT EXISTS links(
-                            researcher_id INT REFERENCES researchers(id),
-                            article_id BIGINT REFERENCES articles(id)
-                            )""")
-    
-    
-    def connect(self):
-        if self.conn is not None and self.cur is not None:
-            raise Exception('Already connected')
-        
-        self.conn = psycopg2.connect(**self.connection_args)
-        self.cur = self.conn.cursor()
-    
-    def commit_and_close(self):
-        if self.conn is None and self.cur is None:
-            raise Exception('Not connected')
-        
-        self.conn.commit()
-        self.cur.close()
-        self.conn.close()
-        
-        self.conn, self.cur = None, None
-
-
-    def add_user(self, id, name, surname, link):
-        try:
-            self.cur.execute("""INSERT INTO researchers VALUES(%s, %s, %s, %s)
-                            ON CONFLICT DO NOTHING""", (id, name, surname, link))
-        except psycopg2.errors.UniqueViolation:
-            logging.error(f'User {id}: {name} {surname} already in database')
-
-    def add_article(self, id):
-        try:
-            self.cur.execute("""INSERT INTO articles VALUES(%s)
-                            ON CONFLICT DO NOTHING""", (id,))
-        except psycopg2.errors.UniqueViolation:
-            logging.error(f'Article {id} already in database')
-    
-    def add_link(self, r_id, a_id):
-        try:
-            self.cur.execute("""INSERT INTO links VALUES(%s, %s)
-                            ON CONFLICT DO NOTHING""", (r_id, a_id))
-        except psycopg2.errors.UniqueViolation:
-            logging.error(f'Link {r_id} {a_id} already in database')
-    
-    
-    def get_links(self):
-        self.connect()
-        self.cur.execute('SELECT * FROM links')
-        links = self.cur.fetchall()
-        self.commit_and_close()
-        return links
-    
-    
-    def remove_users_links(self, r_id):
-        try:
-            self.cur.execute("""DELETE FROM links WHERE researcher_id = %s""", (r_id,))
-        except Exception as e:
-            logging.error(f'Failed to remove links for user {r_id}')
-            logging.error(e)
-
 
 
 class Downloader:
@@ -253,7 +92,7 @@ class Downloader:
                 else:
                     self.DB.remove_users_links(user['id'])
                     
-                    log_message += f' but article number mismatch {len(self.u_id_2_articles[user['id']])} vs exp. {user["art_num"]}'
+                    log_message += f' but article number mismatch {len(self.u_id_2_articles[user["id"]])} vs exp. {user["art_num"]}'
                     log_message += f'\n\tclear and reatempt getting {user["art_num"]} articles'
                     print(log_message)
                     logging.warning(log_message)
@@ -292,12 +131,12 @@ class Downloader:
                 self.DB.add_link(u_id, article)
         self.DB.commit_and_close()
           
-    def get_articles_from_user(self, user: int):
+    def get_articles_from_user(self, user):
         def estimate_scroll_time(art_num: int) -> int:
             if art_num < 256:
                 return 1
             else:
-                return math.sqrt(art_num / 64)
+                return intmath.sqrt(art_num / 64)
         
         self.WD.open_page(user['link'])
         limit = estimate_scroll_time(user['art_num'])
