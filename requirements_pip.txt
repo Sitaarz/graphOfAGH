@@ -1,0 +1,24 @@
+attrs @ file:///home/conda/feedstock_root/build_artifacts/attrs_1683424013410/work
+beautifulsoup4 @ file:///home/conda/feedstock_root/build_artifacts/beautifulsoup4_1680888073205/work
+Brotli @ file:///Users/runner/miniforge3/conda-bld/brotli-split_1695989934239/work
+certifi==2023.7.22
+charset-normalizer @ file:///home/conda/feedstock_root/build_artifacts/charset-normalizer_1698833585322/work
+exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1692026125334/work
+h11 @ file:///home/conda/feedstock_root/build_artifacts/h11_1664132893548/work
+idna @ file:///home/conda/feedstock_root/build_artifacts/idna_1663625384323/work
+lxml @ file:///Users/runner/miniforge3/conda-bld/lxml_1695546809316/work
+outcome @ file:///home/conda/feedstock_root/build_artifacts/outcome_1698324044871/work
+psycopg2 @ file:///Users/runner/miniforge3/conda-bld/psycopg2-split_1697059514368/work
+PySocks @ file:///home/conda/feedstock_root/build_artifacts/pysocks_1661604839144/work
+requests @ file:///home/conda/feedstock_root/build_artifacts/requests_1684774241324/work
+selenium @ file:///home/conda/feedstock_root/build_artifacts/selenium_1698947844637/work
+setuptools==68.2.2
+sniffio @ file:///home/conda/feedstock_root/build_artifacts/sniffio_1662051266223/work
+sortedcontainers @ file:///home/conda/feedstock_root/build_artifacts/sortedcontainers_1621217038088/work
+soupsieve @ file:///home/conda/feedstock_root/build_artifacts/soupsieve_1693929250441/work
+trio @ file:///Users/runner/miniforge3/conda-bld/trio_1699332596355/work
+trio-websocket @ file:///home/conda/feedstock_root/build_artifacts/trio-websocket_1695816857197/work/dist
+typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1695040754690/work
+urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1697720414277/work
+wheel==0.41.3
+wsproto @ file:///home/conda/feedstock_root/build_artifacts/wsproto_1661356345548/work

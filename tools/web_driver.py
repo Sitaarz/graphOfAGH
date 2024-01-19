@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 from selenium import webdriver
 import time
 

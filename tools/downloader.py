@@ -136,7 +136,7 @@ class Downloader:
             if art_num < 256:
                 return 1
             else:
-                return intmath.sqrt(art_num / 64)
+                return int(math.sqrt(art_num / 64))
         
         self.WD.open_page(user['link'])
         limit = estimate_scroll_time(user['art_num'])
